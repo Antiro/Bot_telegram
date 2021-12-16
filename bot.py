@@ -1,11 +1,11 @@
-from logging import NullHandler, fatal
-from telebot import types
-from newsapi import NewsApiClient
-from requests.models import Response
 import sqlite3
 import telebot
 import config
 import hashlib
+from logging import NullHandler, fatal
+from telebot import types
+from newsapi import NewsApiClient
+from requests.models import Response
 
 bot = telebot.TeleBot(config.TOKEN)
 conn = sqlite3.connect('database.db', check_same_thread=False)
@@ -49,24 +49,25 @@ def db_table_reg(message):
 
 # вход
 def db_table_log(message):
-
-    cursor.execute(f"SELECT id FROM users WHERE login = '{log}'").fetchone()
-    conn.commit()
-    if cursor.fetchone() is None:
+    if cursor.execute(f"SELECT id FROM users WHERE login = '{log}'").fetchone() is None:
+        bot.send_message(message.chat.id, 'Такого пользователея нет, зарегестрируйтесь'.format(message.from_user,bot.get_me()),parse_mode = "html")
+    else:
         cursor.execute(f"SELECT id FROM users WHERE login = '{log}' AND password='{password}'")
         conn.commit()
         if cursor.fetchone() is None:
             bot.send_message(message.chat.id, 'Неправильный логин или пароль !'.format(message.from_user,bot.get_me()),parse_mode = "html")
-            
         else:
-            bot.send_message(message.chat.id, 'Вы вошли!'.format(message.from_user,bot.get_me()),parse_mode = "html")
+            k1 = types.ReplyKeyboardMarkup(resize_keyboard=True)
+            item1 = types.KeyboardButton("/help")
+            item2 = types.KeyboardButton("/news")
+            item3 = types.KeyboardButton("/game")
+            item4 = types.KeyboardButton("/exit")
+            k1.add(item1,item2,item3,item4)
+
+            bot.send_message(message.chat.id, 'Вы вошли!'.format(message.from_user,bot.get_me()),parse_mode = "html",reply_markup = k1)
             id = message.chat.id
             cursor.execute(f'INSERT INTO user_online (id_user) VALUES ({id})')
             conn.commit()
-            logUser(message)
-            
-    else:
-        bot.send_message(message.chat.id, 'Такого пользователея нет, зарегестрируйтесь'.format(message.from_user,bot.get_me()),parse_mode = "html")
 
 
 # проверка на вход
@@ -123,7 +124,14 @@ def exit_log(message):
     id = message.chat.id
     cursor.execute(f"DELETE FROM user_online WHERE id_user = {id} ").fetchone()
     conn.commit()
-    bot.send_message(message.chat.id, 'Вы вышли из аккаунта'.format(message.from_user,bot.get_me()),parse_mode = "html")
+
+    k1 = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    item1 = types.KeyboardButton("/help")
+    item2 = types.KeyboardButton("/registration")
+    item3 = types.KeyboardButton("/login")
+    item4 = types.KeyboardButton("/game")
+    k1.add(item1,item2,item3,item4)
+    bot.send_message(message.chat.id, 'Вы вышли из аккаунта'.format(message.from_user,bot.get_me()),parse_mode = "html",reply_markup = k1)
 
 
 
@@ -133,13 +141,16 @@ def exit_log(message):
 @bot.message_handler(commands = ['start'])  
 def welcome(message):
 
-    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    k1 = types.ReplyKeyboardMarkup(resize_keyboard=True)
     item1 = types.KeyboardButton("/help")
-    markup.add(item1)
+    item2 = types.KeyboardButton("/registration")
+    item3 = types.KeyboardButton("/login")
+    item4 = types.KeyboardButton("/game")
+    k1.add(item1,item2,item3,item4)
 
     bot.send_sticker(message.chat.id, 'CAACAgIAAxkBAAEDBrBhXXKdn-N28Yke4lx8iDWJv8xWlAAC5AMAAonq5Qf3qStRjjmNnyEE')
     bot.send_message(message.chat.id,"Хаай, {0.first_name} {0.last_name}".format(message.from_user,bot.get_me()),
-    parse_mode = "html",reply_markup = markup)
+    parse_mode = "html",reply_markup = k1)
 
 
 
@@ -261,6 +272,16 @@ def help_command(message):
         'Игры для чатика - /game \n',
         reply_markup=keyboard
     )
+
+
+# url
+@bot.message_handler(commands=['url'])  
+def url(message):  
+    if logUser(message) == False:
+        bot.send_message(message.chat.id,"URL-сокращатель\nВыберете тип приватности".format(message.from_user,bot.get_me()),parse_mode = "html")
+    else:
+        bot.send_message(message.chat.id,"Вы не вошли в аккаунт !".format(message.from_user,bot.get_me()),parse_mode = "html")
+
 
 
 
